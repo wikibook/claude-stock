@@ -75,7 +75,7 @@ docker run -d --name kis-trade-mcp \
 docker logs kis-trade-mcp
 ```
 
-In Windows Command Prompt, replace the trailing `\` with `^` or write the command on one line. A line like `Uvicorn running on http://0.0.0.0:3000` at the end of the log means the server is up. If Docker says a container with that name already exists, remove it with `docker rm -f kis-trade-mcp` and run again. If port 3000 is already in use, change only the first number, e.g. `-p 127.0.0.1:3001:3000`, and use 3001 in every address below.
+In Windows Command Prompt, replace the trailing `\` with `^` or write the command on one line. A line like `Uvicorn running on http://0.0.0.0:3000` at the end of the log means the server is up. Right after starting, this line may not be there yet; run `docker logs kis-trade-mcp` again after about ten seconds. If Docker says a container with that name already exists, remove it with `docker rm -f kis-trade-mcp` and run again. If port 3000 is already in use, change only the first number, e.g. `-p 127.0.0.1:3001:3000`, and use 3001 in every address below.
 
 `127.0.0.1:3000` keeps the server reachable from your own computer only. The server includes live-order tools, so do not loosen this.
 
@@ -88,9 +88,9 @@ macOS or Windows PowerShell:
 curl -sS --max-time 5 -D- -o /dev/null -H "Authorization: Bearer <TOKEN>" http://127.0.0.1:3000/sse
 ```
 
-`HTTP/1.1 200 OK` with `content-type: text/event-stream` means success. `/sse` is an endless stream, so without `--max-time 5` the command looks frozen; it ending by itself after five seconds is normal. In Windows PowerShell type `curl.exe` instead of `curl`.
+`HTTP/1.1 200 OK` with `content-type: text/event-stream` means success. `/sse` is an endless stream, so without `--max-time 5` the command looks frozen; it ending by itself after five seconds is normal. A last line reading `curl: (28) Operation timed out` at that point is also normal. In Windows PowerShell type `curl.exe` instead of `curl`.
 
-One caveat: `/sse` answers 200 even when the token is missing or wrong (measured September 2026). The token is checked when the AI tool actually calls a tool; a wrong token shows up on the AI tool side as `Unauthorized: invalid or missing MCP access token`. So a 200 here means "the server is alive"; whether the token is right is confirmed by the paper-trading query in step 6.
+One caveat: `/sse` answers 200 even when the token is missing or wrong (measured September 2026). The token is checked when the AI tool actually calls a tool; a wrong token shows up on the AI tool side as `Unauthorized: invalid or missing MCP access token`. Some AI tools show only `Invalid request parameters` instead. So a 200 here means "the server is alive"; whether the token is right is confirmed by the paper-trading query in step 6.
 
 ## 5. Connect an AI tool
 
@@ -166,7 +166,7 @@ When the three-month paper-trading participation period ends and you apply again
 | Container exits immediately; log says `MCP_ACCESS_TOKEN must be set when MCP_TYPE is 'sse'` | Access token missing | Fill `MCP_ACCESS_TOKEN` in `kis.env` and repeat step 3 |
 | `curl` says connection refused | Docker engine (Docker Desktop, etc.) not running or container stopped | Start the Docker engine, check `docker ps`, repeat step 3 if needed |
 | Server is up but unreachable from outside | `MCP_HOST` is `127.0.0.1` | Set `MCP_HOST=0.0.0.0` and recreate the container |
-| `/sse` returns 200 but the AI tool shows `Unauthorized: invalid or missing MCP access token` | Token differs or header missing (`/sse` returns 200 regardless of the token) | Compare the token in `kis.env` and in the AI tool settings; the header must be `Authorization: Bearer <TOKEN>` |
+| `/sse` returns 200 but the AI tool shows `Unauthorized: invalid or missing MCP access token` (or `Invalid request parameters`, depending on the tool) | Token differs or header missing (`/sse` returns 200 regardless of the token) | Compare the token in `kis.env` and in the AI tool settings; the header must be `Authorization: Bearer <TOKEN>` |
 | Port already in use | Another program uses 3000 | Use `-p 127.0.0.1:3001:3000` and 3001 in the addresses |
 | Not shown in Claude Desktop connectors | JSON syntax error, token mismatch, app not fully quit | Check commas and quotes, compare tokens, File → Quit and relaunch |
 | `EGW00304` on a live query | Live App Secret is a placeholder | Expected; verify with the paper account |

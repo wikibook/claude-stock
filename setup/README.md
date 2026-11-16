@@ -75,7 +75,7 @@ docker run -d --name kis-trade-mcp \
 docker logs kis-trade-mcp
 ```
 
-Windows 명령 프롬프트에서는 줄 끝의 `\`를 `^`로 바꾸거나 한 줄로 이어 적습니다. 로그 끝에 `Uvicorn running on http://0.0.0.0:3000` 같은 문장이 보이면 정상입니다. 같은 이름의 컨테이너가 이미 있다는 오류가 나면 `docker rm -f kis-trade-mcp`로 지운 뒤 다시 실행합니다. 3000번 포트를 다른 프로그램이 쓰고 있으면 `-p 127.0.0.1:3001:3000`처럼 앞 번호만 바꾸고, 이후 주소도 3001로 맞춥니다.
+Windows 명령 프롬프트에서는 줄 끝의 `\`를 `^`로 바꾸거나 한 줄로 이어 적습니다. 로그 끝에 `Uvicorn running on http://0.0.0.0:3000` 같은 문장이 보이면 정상입니다. 켠 직후에는 이 문장이 아직 안 보일 수 있습니다. 10초쯤 뒤 `docker logs kis-trade-mcp`를 다시 실행하세요. 같은 이름의 컨테이너가 이미 있다는 오류가 나면 `docker rm -f kis-trade-mcp`로 지운 뒤 다시 실행합니다. 3000번 포트를 다른 프로그램이 쓰고 있으면 `-p 127.0.0.1:3001:3000`처럼 앞 번호만 바꾸고, 이후 주소도 3001로 맞춥니다.
 
 `127.0.0.1:3000`은 내 컴퓨터 안에서만 접속되게 묶어 두는 설정입니다. 실전 주문 기능까지 들어 있는 서버이므로 이 제한은 풀지 마세요.
 
@@ -88,9 +88,9 @@ macOS 또는 Windows PowerShell:
 curl -sS --max-time 5 -D- -o /dev/null -H "Authorization: Bearer <토큰>" http://127.0.0.1:3000/sse
 ```
 
-`HTTP/1.1 200 OK`와 `content-type: text/event-stream`이 보이면 성공입니다. `/sse`는 끊기지 않고 계속 열려 있는 통로라서 `--max-time 5`가 없으면 명령이 멈춘 것처럼 보이는데, 5초 뒤 저절로 끝나면 정상입니다. Windows PowerShell에서는 `curl` 대신 `curl.exe`라고 적으세요.
+`HTTP/1.1 200 OK`와 `content-type: text/event-stream`이 보이면 성공입니다. `/sse`는 끊기지 않고 계속 열려 있는 통로라서 `--max-time 5`가 없으면 명령이 멈춘 것처럼 보이는데, 5초 뒤 저절로 끝나면 정상입니다. 이때 마지막 줄에 `curl: (28) Operation timed out`이 나와도 정상입니다. Windows PowerShell에서는 `curl` 대신 `curl.exe`라고 적으세요.
 
-주의할 점이 하나 있습니다. `/sse`는 토큰이 없거나 틀려도 똑같이 200을 돌려줍니다(2026년 9월 실측). 토큰은 AI 도구가 실제로 도구를 호출할 때 검사되며, 틀리면 AI 도구 쪽에 `Unauthorized: invalid or missing MCP access token` 오류가 뜹니다. 그러니 이 단계의 200은 "서버가 살아 있다"는 뜻이고, 토큰이 맞는지는 6단계의 모의 조회로 확인합니다.
+주의할 점이 하나 있습니다. `/sse`는 토큰이 없거나 틀려도 똑같이 200을 돌려줍니다(2026년 9월 실측). 토큰은 AI 도구가 실제로 도구를 호출할 때 검사되며, 틀리면 AI 도구 쪽에 `Unauthorized: invalid or missing MCP access token` 오류가 뜹니다. AI 도구에 따라 `Invalid request parameters`로만 보이기도 합니다. 그러니 이 단계의 200은 "서버가 살아 있다"는 뜻이고, 토큰이 맞는지는 6단계의 모의 조회로 확인합니다.
 
 ## 5. AI 도구에 연결하기
 
@@ -166,7 +166,7 @@ AI 도구 채팅창에 "모의계좌로 삼성전자 현재가 알려줘"라고 
 | 컨테이너가 켜지자마자 꺼짐. 로그에 `MCP_ACCESS_TOKEN must be set when MCP_TYPE is 'sse'` | 접속 토큰을 넣지 않음 | `kis.env`에 `MCP_ACCESS_TOKEN`을 채우고 3단계를 다시 실행 |
 | `curl`이 연결 거부 | Docker 엔진(Docker Desktop 등)이 꺼져 있거나 컨테이너가 죽음 | Docker 엔진 실행 후 `docker ps`로 확인, 없으면 3단계 재실행 |
 | 서버는 켜졌는데 밖에서 접속 불가 | `MCP_HOST`가 `127.0.0.1` | `MCP_HOST=0.0.0.0`으로 고치고 컨테이너 재생성 |
-| `/sse`는 200인데 AI 도구에서 `Unauthorized: invalid or missing MCP access token` | 토큰이 다르거나 헤더 누락(`/sse`는 토큰과 무관하게 200) | `kis.env`와 AI 도구 설정의 토큰이 같은지, 헤더가 `Authorization: Bearer <토큰>`인지 확인 |
+| `/sse`는 200인데 AI 도구에서 `Unauthorized: invalid or missing MCP access token`(도구에 따라 `Invalid request parameters`) | 토큰이 다르거나 헤더 누락(`/sse`는 토큰과 무관하게 200) | `kis.env`와 AI 도구 설정의 토큰이 같은지, 헤더가 `Authorization: Bearer <토큰>`인지 확인 |
 | 포트가 이미 사용 중 | 3000번을 다른 프로그램이 점유 | `-p 127.0.0.1:3001:3000`으로 바꾸고 주소도 3001로 |
 | Claude Desktop 커넥터에 안 보임 | 설정 파일 JSON 오류, 토큰 불일치, 앱을 완전히 종료하지 않음 | 파일 문법 확인(쉼표·따옴표), 토큰 대조, 파일 → 종료 후 재실행 |
 | 실전 조회에서 `EGW00304` | 실전 App Secret이 자리표시자 | 정상. 모의 조회로 검증 |
